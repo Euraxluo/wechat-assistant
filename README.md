@@ -106,22 +106,49 @@ wechat-assistant/
 
 ---
 
-## 5. 公众号发布脚本使用说明
+## 5. 午盘/盘中研报自动发布 SOP（Agent 必读）
 
-### 5.1 前置条件
+当用户目标是“午盘研报 + 推文/公众号发送”时，不要只做文本分析，必须按下面链路闭环：
+
+```text
+1. 先读 README.md / AGENTS.md，确认当前仓库流程
+2. 读取项目级 skill 文档：akshare-stock / astock-report / xiaodi-financial-analysis-team / content-creator-cn / wechat-auto-publish
+3. 取数并落盘：行情、板块资金、龙头量价、涨停/炸板、港股/南向
+4. 生成公众号 HTML：写入 wechat-publish/articles/<name>.html
+5. 修改 wechat-publish/auto_publish.py 顶部 ARTICLE_HTML_PATH / TITLE / DIGEST
+6. 运行 wechat-publish/auto_publish.py
+7. 运行 utils/verify_publish.py 验证发表记录
+```
+
+### 5.1 本次验证过的卡点与处理方式
+
+- **不要直接用通用 deep-research 代替项目流程**：实时金融数字必须走项目数据源或可追溯快讯，无法核验时写“暂无可验证数据”。
+- **项目级 skill 不一定出现在 Claude Code 的 Skill 列表里**：如果工具列表没有 `akshare-stock` 等项目 skill，就直接读取 `.agents/skills/<skill>/SKILL.md` 并按其中规则执行。
+- **AkShare 可能未安装在当前 Python 环境**：先检查依赖；不可用时使用可追溯行情源兜底，并明确标注数据源、时间戳和核验状态。
+- **东方财富 push2 接口可能拒绝连续请求**：成功取到的行情/板块资金要立即写入 JSON 快照，例如 `wechat-publish/articles/midday_data_YYYYMMDD.json`；后续文章生成用该快照，避免重复请求丢数。
+- **个股/指数实时行情可用腾讯行情作兜底**：用于点位、涨跌幅、成交额、换手、盘口封单估算；必须标注取数时间。
+- **发布脚本参数是硬编码入口**：发布前必须检查 `auto_publish.py` 顶部的文章路径、标题、作者、摘要和封面路径是否对应本次文章。
+- **发表时微信验证是正常卡点**：脚本会等待“微信验证”弹窗，管理员/运营者扫码后继续；不要误判为失败。
+- **成功后必须验证**：`auto_publish.py` 显示成功后，继续运行 `python utils/verify_publish.py`，以发表记录包含目标文章作为最终确认。
+
+---
+
+## 6. 公众号发布脚本使用说明
+
+### 6.1 前置条件
 
 - 已安装 Playwright：`python -m playwright install chromium`
 - 首次运行需要登录公众号后台，脚本会自动保存 cookie 到持久化浏览器 profile
 - 后续运行复用 profile，无需重复登录
 
-### 5.2 运行方式
+### 6.2 运行方式
 
 ```bash
 cd wechat-publish
 python auto_publish.py
 ```
 
-### 5.3 脚本执行流程
+### 6.3 脚本执行流程
 
 1. 打开公众号后台图文编辑页
 2. 粘贴文章 HTML 到编辑器
@@ -131,14 +158,14 @@ python auto_publish.py
 6. 点击「发表」→ 处理弹窗 → 显示二维码
 7. 用户扫码确认后发表成功
 
-### 5.4 已知限制
+### 6.4 已知限制
 
 - 首次登录需要手动扫码
 - 微信会话会过期，长时间运行后可能出现 320003 错误，此时需要重新登录
 - 每次群发会消耗公众号群发次数
 - 文章 HTML 中不要使用 `<table>`、`<section>` 等复杂标签，移动端会错位；使用 `<div>`、`<p>`、`<br>` + 粗体即可
 
-### 5.5 辅助脚本
+### 6.5 辅助脚本
 
 | 脚本 | 作用 |
 |------|------|
@@ -150,7 +177,7 @@ python auto_publish.py
 
 ---
 
-## 6. Skill 使用优先级
+## 7. Skill 使用优先级
 
 金融分析主题下，优先使用以下 skill：
 
@@ -180,7 +207,7 @@ python auto_publish.py
 
 ---
 
-## 7. 常见问题（FAQ for Agent）
+## 8. 常见问题（FAQ for Agent）
 
 ### Q1：用户让我发布文章，但 skill 不工作？
 A：市场安装的 `wechat-publisher` / `wechat-article-pro` 发布功能需要 `WECHAT_APP_ID` + `WECHAT_APP_SECRET` + IP 白名单。如果用户没有提供这些，改用 `wechat-publish/auto_publish.py` 浏览器自动化方案。
@@ -199,7 +226,7 @@ A：拷贝到 `.agents/skills/` 下，更新本 README 的 skill 列表，并在
 
 ---
 
-## 8. 提交注意事项
+## 9. 提交注意事项
 
 本仓库中需要提交的内容：
 - ✅ `wechat-publish/` 项目代码与文章
@@ -213,7 +240,7 @@ A：拷贝到 `.agents/skills/` 下，更新本 README 的 skill 列表，并在
 
 ---
 
-## 9. 快速开始（Agent 速查）
+## 10. 快速开始（Agent 速查）
 
 ```bash
 # 1. 查看金融 skill

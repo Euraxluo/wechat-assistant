@@ -18,10 +18,10 @@ from playwright.async_api import async_playwright
 # ========= 项目根目录 =========
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-ARTICLE_HTML_PATH = os.path.join(PROJECT_DIR, "articles", "article_ai_invest_v3.html")
-TITLE = "全球半导体板块剧烈调整：产业周期与市场情绪的再定价"
+ARTICLE_HTML_PATH = os.path.join(PROJECT_DIR, "articles", "midday_report_0708.html")
+TITLE = "7月8日午盘实时研报：科创50强反包，算力资金成主线"
 AUTHOR = "AI提效实验室"
-DIGEST = "【策略研究】SOX两日跌11%后二次探底，三星业绩暴增18倍股价反跌7%。资金面、技术面、产业面全维度分析。三条主线+杠铃策略，附7家机构最新观点。"
+DIGEST = "午盘技术面复盘：沪指重回4000点，科创50涨3.13%，算力概念主力净流入超130亿，港股恒科强势上攻。"
 COVER_IMAGE_PATH = os.path.join(PROJECT_DIR, "covers", "latest_cover_v3.png")
 MP_URL = "https://mp.weixin.qq.com/"
 SCREENSHOT_DIR = os.path.join(PROJECT_DIR, "screenshots")
