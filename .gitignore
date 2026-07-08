@@ -1,0 +1,12 @@
+# 浏览器 session（运行时生成）
+wechat-publish/.browser_profile/
+
+# 运行时缓存
+wechat-publish/draft_url.json
+
+# 运行时截图（除非用于文档）
+wechat-publish/screenshots/
+
+
+.cursor/*
+!.cursor/skills
