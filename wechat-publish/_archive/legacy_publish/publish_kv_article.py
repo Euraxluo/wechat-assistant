@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-微信公众号自动发布脚本 v9
-核心修复（相比 v8）：
-1. 封面上传改用编辑器工具栏图片上传，获取真实有效的 file_id 和 mmbiz CDN URL
-   - 旧版 filetransfer API + Upload.mediaFileUrl() 返回的 URL 无法加载图片
-   - 新版：通过工具栏 file input 上传 → 从 img[data-imgfileid] 取 file_id
-2. 保存后封面预览 URL 会被微信重置为无效的 filetransfer URL，因此在保存后重新加载并恢复预览 URL
-3. 发表改为从编辑器直接点击 mass_send，不再依赖草稿箱卡片点击
-4. 处理发表弹窗：发表 → 继续发表 → 扫码验证/正在发表
+现代 KV 存储技术综述发布脚本（基于 v2 优化版模板）
+==================================================
+题材：tech-ai / 数据库与存储系统
+风格：研究综述、证据驱动、技术深度，配图蓝紫科技调
+
+运行：
+/Users/echo/.workbuddy/binaries/python/envs/default/bin/python \
+    /Users/echo/project/wechat-assistant/wechat-publish/publish_kv_article.py
 """
 import asyncio
 import json
@@ -15,27 +15,31 @@ import os
 import re
 from playwright.async_api import async_playwright
 
-# ========= 项目根目录 =========
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-ARTICLE_HTML_PATH = os.path.join(PROJECT_DIR, "articles", "article_ai_invest_v3.html")
-TITLE = "全球半导体板块剧烈调整：产业周期与市场情绪的再定价"
+# ===================== 配置区 =====================
+TITLE = "2026，KV 存储走到哪了？工业实现与学术前沿综述"
 AUTHOR = "AI提效实验室"
-DIGEST = "【策略研究】SOX两日跌11%后二次探底，三星业绩暴增18倍股价反跌7%。资金面、技术面、产业面全维度分析。三条主线+杠铃策略，附7家机构最新观点。"
-COVER_IMAGE_PATH = os.path.join(PROJECT_DIR, "covers", "latest_cover_v3.png")
+DIGEST = "基于25个来源、99条可证伪claim和三方对抗验证，梳理RocksDB、TiKV、Pebble三类工业实现，以及EcoTune、DumpKV、DobLIX代表的2025—2026学术前沿。"
+ARTICLE_HTML_PATH = os.path.join(PROJECT_DIR, "articles", "article_kv_storage_2026_0713.html")
+COVER_IMAGE_PATH = os.path.join(PROJECT_DIR, "articles", "images", "Cover_image_for_a_technical_ar_2026-07-13T07-31-37.png")
+ARTICLE_IMAGES_DIR = os.path.join(PROJECT_DIR, "articles", "images")
+# ==================================================
+
 MP_URL = "https://mp.weixin.qq.com/"
-SCREENSHOT_DIR = os.path.join(PROJECT_DIR, "screenshots")
+SCREENSHOT_DIR = "/tmp/wechat_kv_shots"
 USER_DATA_DIR = os.path.join(PROJECT_DIR, ".browser_profile")
 DRAFT_URL_FILE = os.path.join(PROJECT_DIR, "draft_url.json")
 os.makedirs(USER_DATA_DIR, exist_ok=True)
 os.makedirs(SCREENSHOT_DIR, exist_ok=True)
+os.makedirs(ARTICLE_IMAGES_DIR, exist_ok=True)
 
 
 def save_draft_url(url, appmsg_id=None, title=None):
     data = {"url": url, "appmsg_id": appmsg_id, "title": title or TITLE}
     with open(DRAFT_URL_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
-    print(f"  草稿 URL 已保存")
+    print(f"  草稿 URL 已保存 -> {DRAFT_URL_FILE}")
 
 
 def load_draft_url():
@@ -47,7 +51,7 @@ def load_draft_url():
 
 def clear_draft_url():
     if os.path.exists(DRAFT_URL_FILE):
-        os.remove(DRAFT_URL_FILE)
+        pass  # 不再删除草稿记录文件
         print(f"  已清除草稿记录")
 
 
@@ -58,7 +62,8 @@ async def is_logged_in(page):
         body_text = await page.inner_text("body")
         if any(kw in body_text for kw in ["新的创作", "内容管理", "创作管理"]):
             return True
-    except: pass
+    except:
+        pass
     return False
 
 
@@ -71,13 +76,15 @@ async def wait_for_login(page, max_seconds=300):
             try:
                 await page.reload(wait_until="domcontentloaded")
                 await page.wait_for_timeout(2000)
-            except: pass
+            except:
+                pass
     return False
 
 
 async def extract_token(page):
     m = re.search(r'token=(\d+)', page.url)
-    if m: return m.group(1)
+    if m:
+        return m.group(1)
     try:
         return await page.evaluate("""
             () => {
@@ -88,7 +95,8 @@ async def extract_token(page):
                 return '';
             }
         """)
-    except: return ''
+    except:
+        return ''
 
 
 async def fill_title(page, title):
@@ -115,7 +123,8 @@ async def fill_author(page, author):
             await loc.fill(author)
             await loc.press("Tab")
             return
-    except: pass
+    except:
+        pass
     await page.evaluate("""
         (author) => {
             const input = document.querySelector('input[name="author"]');
@@ -129,11 +138,18 @@ async def paste_content(page, html_content):
     print("  粘贴正文...")
     await page.evaluate("""
         (html) => {
+            let clean = html;
+            const bodyMatch = html.match(/<body[^>]*>([\\s\\S]*)<\\/body>/i);
+            if (bodyMatch) {
+                clean = bodyMatch[1];
+            }
+            clean = clean.replace(/<style[\\s\\S]*?<\\/style>/gi, '');
+            clean = clean.replace(/<script[\\s\\S]*?<\\/script>/gi, '');
             const pms = document.querySelectorAll('.ProseMirror[contenteditable="true"]');
             for (const pm of pms) {
                 if (!(pm.getAttribute('data-placeholder') || '').includes('标题')) {
                     pm.focus();
-                    pm.innerHTML = html;
+                    pm.innerHTML = clean;
                     pm.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertHTML' }));
                     return true;
                 }
@@ -152,7 +168,8 @@ async def fill_digest(page, digest):
             await loc.fill(digest)
             await loc.press("Tab")
             return
-    except: pass
+    except:
+        pass
     await page.evaluate("""
         (digest) => {
             const ta = document.querySelector('textarea[name="digest"]');
@@ -163,7 +180,7 @@ async def fill_digest(page, digest):
 
 
 async def upload_cover_via_toolbar(page, cover_path):
-    """通过编辑器工具栏上传封面图，返回 (cover_url, file_id)"""
+    """通过编辑器工具栏上传封面图"""
     print("  通过工具栏上传封面...")
     await page.evaluate("""
         () => {
@@ -233,7 +250,6 @@ async def upload_cover_via_toolbar(page, cover_path):
     if not cover_url:
         return None, None
 
-    # 删除正文中的临时图片
     await page.evaluate("""
         (url) => {
             const pms = document.querySelectorAll('.ProseMirror[contenteditable="true"]');
@@ -257,8 +273,131 @@ async def upload_cover_via_toolbar(page, cover_path):
     return cover_url, file_id
 
 
+async def upload_inline_images(page, image_dir, html_content):
+    """上传 HTML 中引用的所有本地图片到微信素材库"""
+    img_paths = re.findall(r'<img[^>]+src=["\']([^"\'>]+)["\']', html_content)
+    local_files = []
+    seen = set()
+    for p in img_paths:
+        if p.startswith("http") or p.startswith("data:"):
+            continue
+        name = os.path.basename(p)
+        if name and name not in seen:
+            seen.add(name)
+            local_files.append(name)
+
+    if not local_files:
+        print("  正文中没有本地图片需要上传")
+        return {}
+
+    print(f"  发现 {len(local_files)} 张正文本地图片: {local_files}")
+
+    await page.evaluate("""
+        () => {
+            const pms = document.querySelectorAll('.ProseMirror[contenteditable="true"]');
+            for (const pm of pms) {
+                if (!(pm.getAttribute('data-placeholder') || '').includes('标题')) {
+                    pm.focus();
+                    pm.innerHTML = '<p><br></p>';
+                    return;
+                }
+            }
+        }
+    """)
+    await page.wait_for_timeout(1000)
+
+    file_inputs = await page.query_selector_all("input[type='file']")
+    if len(file_inputs) == 0:
+        print("    尝试点击「图片」按钮触发 file input...")
+        await page.evaluate("""
+            () => {
+                const btns = document.querySelectorAll('button');
+                for (const b of btns) {
+                    if ((b.innerText || '').includes('图片')) { b.click(); return; }
+                }
+            }
+        """)
+        await page.wait_for_timeout(2000)
+        file_inputs = await page.query_selector_all("input[type='file']")
+
+    if not file_inputs:
+        print("    找不到图片上传 input，正文图片无法上传")
+        return {}
+
+    file_input = file_inputs[0]
+    mapping = {}
+
+    for filename in local_files:
+        local_path = os.path.join(image_dir, filename)
+        if not os.path.exists(local_path):
+            print(f"    图片文件不存在，跳过: {local_path}")
+            continue
+
+        try:
+            await file_input.set_input_files(local_path)
+            print(f"    已上传: {filename}")
+
+            uploaded = False
+            for _ in range(20):
+                await page.wait_for_timeout(1000)
+                imgs = await page.evaluate("""
+                    () => {
+                        const pms = document.querySelectorAll('.ProseMirror[contenteditable="true"]');
+                        for (const pm of pms) {
+                            if (!(pm.getAttribute('data-placeholder') || '').includes('标题')) {
+                                return Array.from(pm.querySelectorAll('img')).map(img => ({
+                                    src: img.src,
+                                    fileId: img.getAttribute('data-imgfileid') || img.dataset.imgfileid,
+                                }));
+                            }
+                        }
+                        return [];
+                    }
+                """)
+                valid = [img for img in imgs if img.get('src') and img['src'].startswith('http')]
+                if valid:
+                    url = valid[-1]['src']
+                    mapping[filename] = url
+                    print(f"      URL: {url[:60]}...")
+                    await page.evaluate("""
+                        (url) => {
+                            const pms = document.querySelectorAll('.ProseMirror[contenteditable="true"]');
+                            for (const pm of pms) {
+                                if (!(pm.getAttribute('data-placeholder') || '').includes('标题')) {
+                                    const imgs = pm.querySelectorAll('img');
+                                    for (const img of imgs) {
+                                        if (img.src === url) {
+                                            const p = img.closest('p');
+                                            if (p) p.remove();
+                                            else img.remove();
+                                        }
+                                    }
+                                    return;
+                                }
+                            }
+                        }
+                    """, url)
+                    uploaded = True
+                    break
+
+            if not uploaded:
+                print(f"    上传 {filename} 后未获取到 CDN URL")
+        except Exception as e:
+            print(f"    上传 {filename} 失败: {e}")
+
+    return mapping
+
+
+def replace_image_urls(html_content, mapping):
+    if not mapping:
+        return html_content
+    for filename, url in mapping.items():
+        pattern = r'(<img[^>]*src=["\']?)' + re.escape(filename) + r'(["\'][^>]*>)'
+        html_content = re.sub(pattern, r'\1' + url + r'\2', html_content)
+    return html_content
+
+
 async def set_cover(page, cover_url, file_id):
-    """手动设置封面到编辑器"""
     print("  设置封面...")
     await page.evaluate("""
         (params) => {
@@ -304,7 +443,6 @@ async def set_cover(page, cover_url, file_id):
 
 
 async def save_draft(page):
-    """保存草稿并返回 appmsg_id"""
     print("  保存草稿...")
     await page.evaluate("""
         () => {
@@ -328,7 +466,6 @@ async def save_draft(page):
 
 
 async def restore_cover_preview(page, cover_url, file_id):
-    """保存并重新加载后，恢复封面预览 URL（不保存）"""
     print("  恢复封面预览 URL...")
     await page.evaluate("""
         (params) => {
@@ -353,8 +490,28 @@ async def restore_cover_preview(page, cover_url, file_id):
     await page.wait_for_timeout(1000)
 
 
+async def click_dialog_button(page, target_text):
+    return await page.evaluate("""
+        (targetText) => {
+            const dialogs = document.querySelectorAll('.weui-desktop-dialog, .weui-desktop-overlay, [class*="dialog"]');
+            for (const d of dialogs) {
+                if (d.offsetHeight === 0) continue;
+                const btns = d.querySelectorAll('button, a, [role="button"], .weui-desktop-btn');
+                for (const b of btns) {
+                    if ((b.innerText || '').trim() === targetText) { b.click(); return true; }
+                }
+            }
+            const allBtns = document.querySelectorAll('button, a, [role="button"]');
+            for (const b of allBtns) {
+                if ((b.innerText || '').trim() === targetText && b.offsetHeight > 0) { b.click(); return true; }
+            }
+            return false;
+        }
+    """, target_text)
+
+
 async def publish_from_editor(page):
-    """从编辑器点击 mass_send 并发表"""
+    """从编辑器发表，等待微信扫码验证（最长 ~6 分钟）"""
     print("\n  从编辑器发表...")
     try:
         await page.locator('button.mass_send').first.click(timeout=5000)
@@ -363,9 +520,11 @@ async def publish_from_editor(page):
         print(f"    点击失败: {e}")
         return False
 
-    for round_idx in range(12):
-        await page.wait_for_timeout(2500)
-        await page.screenshot(path=os.path.join(SCREENSHOT_DIR, f"publish_dialog_{round_idx}.png"))
+    MAX_ROUNDS = 120
+    ROUND_MS = 3000
+    for round_idx in range(MAX_ROUNDS):
+        await page.wait_for_timeout(ROUND_MS)
+        await safe_shot(page, os.path.join(SCREENSHOT_DIR, f"publish_dialog_{round_idx}.png"))
 
         dialog_info = await page.evaluate("""
             () => {
@@ -386,86 +545,78 @@ async def publish_from_editor(page):
             }
         """)
 
-        print(f"\n    第{round_idx+1}轮 URL={page.url}")
         if not dialog_info.get('found'):
-            print("    无弹窗")
             if "appmsgpublish" in page.url:
                 print("    ✅ 已跳转到发表记录页")
                 return True
             continue
 
-        print(f"    弹窗: {dialog_info['text'][:80]}")
-        print(f"    按钮: {dialog_info['buttons']}")
-
         dialog_text = dialog_info['text']
         buttons = dialog_info['buttons']
-        target = None
+        print(f"\n    第{round_idx+1}轮 | 弹窗: {dialog_text[:80]}")
+        print(f"    按钮: {buttons}")
 
-        # 微信验证：需要用户扫码，脚本继续等待
-        if '扫码' in dialog_text or '验证' in dialog_text or '管理员' in dialog_text:
+        # 二维码失效自动刷新
+        if any(k in dialog_text for k in ['失效', '过期', '二维码已', '请点击刷新']):
+            for b in buttons:
+                if any(k in b for k in ['刷新', '重新获取', '点击刷新']):
+                    print(f"    🔄 二维码失效，点击刷新: {b}")
+                    await click_dialog_button(page, b)
+                    break
+            continue
+
+        # 等待扫码
+        if any(k in dialog_text for k in ['扫码', '验证', '管理员']):
             print("    ⚠️ 需要微信扫码验证，脚本继续等待...")
             continue
 
-        # 正在发表中
         if '正在发表' in dialog_text:
             print("    ⏳ 正在发表中...")
             continue
 
-        if 'AI' in dialog_text or '声明' in dialog_text:
-            for b in buttons:
-                if '无需声明并发表' in b or '无需声明' in b:
-                    target = b
-                    break
+        # 按优先级点按钮
+        target = None
+        for b in buttons:
+            if '无需声明并发表' in b or '无需声明' in b:
+                target = b; break
         if not target:
             for b in buttons:
                 if '确认群发' in b or '确定群发' in b:
-                    target = b
-                    break
+                    target = b; break
         if not target:
             for b in buttons:
                 if b == '发表':
-                    target = b
-                    break
+                    target = b; break
         if not target:
             for b in buttons:
                 if '继续发表' in b:
-                    target = b
-                    break
+                    target = b; break
         if not target:
             for b in buttons:
                 if '我知道了' in b:
-                    target = b
-                    break
+                    target = b; break
         if not target:
             for b in buttons:
                 if b == '确定':
-                    target = b
-                    break
+                    target = b; break
 
         if target:
             print(f"    点击: {target}")
-            await page.evaluate("""
-                (targetText) => {
-                    const dialogs = document.querySelectorAll('.weui-desktop-dialog, .weui-desktop-overlay, [class*="dialog"]');
-                    for (const d of dialogs) {
-                        if (d.offsetHeight === 0) continue;
-                        const btns = d.querySelectorAll('button, a, [role="button"], .weui-desktop-btn');
-                        for (const b of btns) {
-                            if ((b.innerText || '').trim() === targetText) { b.click(); return true; }
-                        }
-                    }
-                    const allBtns = document.querySelectorAll('button, a, [role="button"]');
-                    for (const b of allBtns) {
-                        if ((b.innerText || '').trim() === targetText && b.offsetHeight > 0) { b.click(); return true; }
-                    }
-                    return false;
-                }
-            """, target)
+            await click_dialog_button(page, target)
         else:
             print("    未识别目标按钮，停止")
             return False
 
+    print("    ⏰ 扫码等待超时，未确认发表")
     return False
+
+
+async def safe_shot(page, path, full_page=False, timeout=8000):
+    """截图容错包装"""
+    try:
+        await page.screenshot(path=path, full_page=full_page, timeout=timeout)
+    except Exception as e:
+        print(f"[warn] 截图已跳过 {os.path.basename(path)}: {e}")
 
 
 async def main():
@@ -504,15 +655,30 @@ async def main():
         new_url = f"https://mp.weixin.qq.com/cgi-bin/appmsg?t=media/appmsg_edit&action=edit&type=77&isNew=1&token={token}&lang=zh_CN"
         await page.goto(new_url, wait_until="domcontentloaded", timeout=15000)
         await page.wait_for_timeout(5000)
-        await page.screenshot(path=os.path.join(SCREENSHOT_DIR, "editor_new.png"))
+        await safe_shot(page, os.path.join(SCREENSHOT_DIR, "editor_new.png"))
 
-        print("\n[3] 填写标题...")
+        print("\n[3] 上传正文图片到微信 CDN...")
+        image_mapping = await upload_inline_images(page, ARTICLE_IMAGES_DIR, html_content)
+        if image_mapping:
+            html_content = replace_image_urls(html_content, image_mapping)
+            print(f"  已替换 {len(image_mapping)} 张图片为微信 CDN URL")
+        else:
+            print("  ⚠️ 没有图片被上传")
+
+        print("\n[4] 重新打开编辑器，准备粘贴正文...")
+        token = await extract_token(page)
+        new_url = f"https://mp.weixin.qq.com/cgi-bin/appmsg?t=media/appmsg_edit&action=edit&type=77&isNew=1&token={token}&lang=zh_CN"
+        await page.goto(new_url, wait_until="domcontentloaded", timeout=15000)
+        await page.wait_for_timeout(5000)
+        await safe_shot(page, os.path.join(SCREENSHOT_DIR, "editor_new_replaced.png"))
+
+        print("\n[5] 填写标题...")
         await fill_title(page, TITLE)
 
-        print("\n[4] 填写作者...")
+        print("\n[6] 填写作者...")
         await fill_author(page, AUTHOR)
 
-        print("\n[5] 粘贴正文...")
+        print("\n[7] 粘贴正文...")
         await paste_content(page, html_content)
         text_len = await page.evaluate("""
             () => {
@@ -527,37 +693,64 @@ async def main():
         """)
         print(f"    正文字数: {text_len}")
 
-        print("\n[6] 上传封面...")
+        print("\n[8] 上传封面...")
         cover_url, file_id = await upload_cover_via_toolbar(page, COVER_IMAGE_PATH)
+        # 如果封面上传失败或没有 file_id，回退到使用已上传的正文图片作为封面
+        if not cover_url or not file_id:
+            print("    ⚠️ 封面上传未获得有效 file_id，尝试使用已上传的正文图片...")
+            # 从 image_mapping 中取第一张图片的 CDN URL 作为封面
+            fallback_url = list(image_mapping.values())[0] if image_mapping else None
+            if fallback_url:
+                # 从已上传的图片中提取 file_id（通过重新查询 DOM）
+                cover_url = fallback_url
+                # 尝试从微信素材库中找到对应 file_id
+                file_id = await page.evaluate("""
+                    () => {
+                        const pms = document.querySelectorAll('.ProseMirror[contenteditable="true"]');
+                        for (const pm of pms) {
+                            if (!(pm.getAttribute('data-placeholder') || '').includes('标题')) {
+                                const imgs = pm.querySelectorAll('img');
+                                for (const img of imgs) {
+                                    const fid = img.getAttribute('data-imgfileid') || img.dataset.imgfileid;
+                                    if (fid) return fid;
+                                }
+                            }
+                        }
+                        return '';
+                    }
+                """)
+                print(f"    回退封面 URL: {cover_url[:60]}...  file_id: {file_id}")
+            else:
+                print("❌ 无可用回退图片，封面可能无法设置")
         if not cover_url:
             print("❌ 封面上传失败")
             await context.close()
             return
         await set_cover(page, cover_url, file_id)
-        await page.screenshot(path=os.path.join(SCREENSHOT_DIR, "cover_set.png"))
+        await safe_shot(page, os.path.join(SCREENSHOT_DIR, "cover_set.png"))
 
-        print("\n[7] 填写摘要...")
+        print("\n[9] 填写摘要...")
         await fill_digest(page, DIGEST)
 
-        print("\n[8] 保存草稿...")
+        print("\n[10] 保存草稿...")
         appmsg_id = await save_draft(page)
-        await page.screenshot(path=os.path.join(SCREENSHOT_DIR, "after_save.png"), full_page=True)
+        await safe_shot(page, os.path.join(SCREENSHOT_DIR, "after_save.png"), full_page=True)
 
-        print("\n[9] 重新加载并恢复封面预览...")
+        print("\n[11] 重新加载并恢复封面预览...")
         reload_url = f"https://mp.weixin.qq.com/cgi-bin/appmsg?t=media/appmsg_edit&action=edit&type=77&appmsgid={appmsg_id}&token={token}&lang=zh_CN"
         await page.goto(reload_url, wait_until="domcontentloaded", timeout=15000)
         await page.wait_for_timeout(5000)
         await restore_cover_preview(page, cover_url, file_id)
-        await page.screenshot(path=os.path.join(SCREENSHOT_DIR, "cover_restored.png"))
+        await safe_shot(page, os.path.join(SCREENSHOT_DIR, "cover_restored.png"))
 
-        print("\n[10] 发表...")
+        print("\n[12] 发表（等待微信扫码验证，最长约 6 分钟）...")
         result = await publish_from_editor(page)
 
-        print("\n[11] 最终验证...")
+        print("\n[13] 最终验证...")
         await page.wait_for_timeout(5000)
         final_url = page.url
         print(f"    最终 URL: {final_url}")
-        await page.screenshot(path=os.path.join(SCREENSHOT_DIR, "publish_final.png"), full_page=True)
+        await safe_shot(page, os.path.join(SCREENSHOT_DIR, "publish_final.png"), full_page=True)
 
         try:
             body_text = await page.inner_text("body")
@@ -568,13 +761,13 @@ async def main():
                 result = True
             if any(kw in body_text for kw in ["群发失败", "发布失败", "操作失败"]):
                 print("    ❌ 检测到失败关键词")
-        except: pass
+        except:
+            pass
 
         if result:
-            clear_draft_url()
-            print("\n✅ 文章发表流程已完成")
+            print("\n✅ 文章发表流程已完成（草稿URL已保留供校验）")
         else:
-            print("\n⚠️ 发表未最终确认，请检查发表记录")
+            print("\n⚠️ 发表未最终确认，请检查发表记录或重新运行脚本")
 
         print("\n浏览器保持打开60秒...")
         await page.wait_for_timeout(60000)

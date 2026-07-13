@@ -1,81 +1,129 @@
-import asyncio, os, json
+#!/usr/bin/env python3
+"""验证最新公众号发表记录。
+
+可选参数：
+  --title "文章标题"   显式指定要核对的目标标题（推荐，避免读到旧脚本标题）
+"""
+import argparse
+import asyncio
+import os
+import re
+import sys
+from pathlib import Path
 from playwright.async_api import async_playwright
 
-SCREENSHOT_DIR = "/Users/echo/project/wechat-skills"
+PROJECT_DIR = Path(__file__).resolve().parents[1]
+SCREENSHOT_DIR = PROJECT_DIR / "screenshots"
+USER_DATA_DIR = PROJECT_DIR / ".browser_profile"
+AUTO_PUBLISH_FILE = PROJECT_DIR / "auto_publish.py"
+DRAFT_URL_FILE = PROJECT_DIR / "draft_url.json"
+MP_URL = "https://mp.weixin.qq.com/"
+SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def load_expected_title():
+    if DRAFT_URL_FILE.exists():
+        text = DRAFT_URL_FILE.read_text(encoding="utf-8")
+        m = re.search(r'"title"\s*:\s*"([^"]+)"', text)
+        if m:
+            return m.group(1)
+    if AUTO_PUBLISH_FILE.exists():
+        text = AUTO_PUBLISH_FILE.read_text(encoding="utf-8")
+        m = re.search(r'^TITLE\s*=\s*["\'](.+?)["\']\s*$', text, re.M)
+        if m:
+            return m.group(1)
+    return ""
+
+
+async def extract_token(page):
+    return await page.evaluate(
+        """
+        () => {
+            const m = window.location.href.match(/token=(\d+)/);
+            if (m) return m[1];
+            const l = document.querySelector('a[href*="token="]');
+            if (l) {
+                const m2 = l.href.match(/token=(\d+)/);
+                return m2 ? m2[1] : '';
+            }
+            return '';
+        }
+        """
+    )
+
 
 async def main():
+    parser = argparse.ArgumentParser(description="验证公众号发表记录")
+    parser.add_argument("--title", default=None, help="显式指定要核对的目标标题")
+    args = parser.parse_args()
+
+    expected_title = args.title or load_expected_title()
+    print(f"目标标题: {expected_title or '（未解析到）'}")
+
     async with async_playwright() as p:
         context = await p.chromium.launch_persistent_context(
-            user_data_dir='/Users/echo/project/wechat-skills/.browser_profile',
+            user_data_dir=str(USER_DATA_DIR),
             headless=False,
-            viewport={'width': 1280, 'height': 900},
-            args=['--disable-blink-features=AutomationControlled', '--no-sandbox']
+            viewport={"width": 1280, "height": 900},
+            args=["--disable-blink-features=AutomationControlled"],
         )
         page = context.pages[0] if context.pages else await context.new_page()
-        
-        # 先访问首页获取token
+
         print("[1] 访问公众号主页...")
-        await page.goto('https://mp.weixin.qq.com/', wait_until='domcontentloaded', timeout=30000)
+        await page.goto(MP_URL, wait_until="domcontentloaded", timeout=30000)
         await page.wait_for_timeout(3000)
-        await page.screenshot(path=os.path.join(SCREENSHOT_DIR, "verify_home.png"))
-        
-        # 检查是否已登录
-        body_text = await page.inner_text('body')
-        is_login_page = ('扫码' in body_text and '公众号' in body_text) or '请重新登录' in body_text or '二维码' in body_text
+        await page.screenshot(path=str(SCREENSHOT_DIR / "verify_home.png"))
+
+        body_text = await page.inner_text("body")
+        is_login_page = (
+            ("扫码" in body_text and "公众号" in body_text)
+            or "请重新登录" in body_text
+            or "二维码" in body_text
+        )
         print(f"  是否登录页: {is_login_page}")
-        
         if is_login_page:
-            print("  ⚠️ 浏览器已退出登录，需要你重新扫码登录")
-            print("  请查看浏览器窗口，用微信扫码登录")
-            await page.wait_for_timeout(60000)
-            await page.screenshot(path=os.path.join(SCREENSHOT_DIR, "verify_after_login.png"))
-        
-        # 提取token
-        token = await page.evaluate("""
+            print("  ⚠️ 浏览器已退出登录，请先扫码登录后重试")
+            await context.close()
+            return
+
+        token = await extract_token(page)
+        if not token:
+            print("  ❌ 未提取到 token")
+            await context.close()
+            return
+
+        print("[2] 检查发表记录...")
+        pub_url = f"https://mp.weixin.qq.com/cgi-bin/appmsgpublish?sub=list&begin=0&count=20&token={token}&lang=zh_CN"
+        await page.goto(pub_url, wait_until="domcontentloaded", timeout=30000)
+        await page.wait_for_timeout(5000)
+        await page.screenshot(path=str(SCREENSHOT_DIR / "verify_publish_record.png"), full_page=True)
+
+        body_text = await page.inner_text("body")
+        page_content = await page.content()
+        has_title = expected_title in body_text if expected_title else False
+        has_title2 = expected_title in page_content if expected_title else False
+        print(f"  发表记录包含目标文章(inner_text): {has_title}")
+        print(f"  发表记录包含目标文章(content): {has_title2}")
+
+        articles = await page.evaluate(
+            """
             () => {
-                const m = window.location.href.match(/token=(\\d+)/);
-                if (m) return m[1];
-                const l = document.querySelector('a[href*=\"token=\"]');
-                if (l) { const m2 = l.href.match(/token=(\\d+)/); return m2 ? m2[1] : ''; }
-                return '';
+                const cards = document.querySelectorAll('.weui-desktop-card');
+                return Array.from(cards).map(card => {
+                    const title = card.querySelector('.weui-desktop-card__title, .publish_title, .appmsg_title')?.innerText || '';
+                    const time = card.querySelector('.weui-desktop-card__time, .publish_time')?.innerText || '';
+                    const status = card.querySelector('.publish_status')?.innerText || '';
+                    return { title: title.trim().slice(0, 80), time: time.trim(), status: status.trim() };
+                }).filter(x => x.title);
             }
-        """)
-        print(f"  token: {token}")
-        
-        if token:
-            # 检查发表记录
-            print("[2] 检查发表记录...")
-            pub_url = f'https://mp.weixin.qq.com/cgi-bin/appmsgpublish?sub=list&begin=0&count=10&token={token}&lang=zh_CN'
-            await page.goto(pub_url, wait_until='domcontentloaded', timeout=30000)
-            await page.wait_for_timeout(5000)
-            await page.screenshot(path=os.path.join(SCREENSHOT_DIR, "verify_publish_record.png"))
-            
-            body_text = await page.inner_text('body')
-            has_title = '全球半导体板块剧烈调整' in body_text
-            has_title2 = '全球半导体板块剧烈调整' in await page.content()
-            print(f"  发表记录包含目标文章(inner_text): {has_title}")
-            print(f"  发表记录包含目标文章(content): {has_title2}")
-            
-            # 提取文章列表
-            articles = await page.evaluate("""
-                () => {
-                    const rows = document.querySelectorAll('.publish_status');
-                    const items = [];
-                    rows.forEach(r => {
-                        const card = r.closest('.weui-desktop-card');
-                        const title = card ? (card.querySelector('.weui-desktop-card__title')?.innerText || '') : '';
-                        const time = (card?.querySelector('.weui-desktop-card__time')?.innerText || '');
-                        const status = (card?.querySelector('.publish_status')?.innerText || '');
-                        if (title) items.push({title: title.slice(0, 80), time, status});
-                    });
-                    return items;
-                }
-            """)
-            print(f"  找到 {len(articles)} 篇文章:")
-            for a in articles[:5]:
-                print(f"    - {a['title']} | {a['time']} | {a['status']}")
-        
-        await page.wait_for_timeout(3000)
+            """
+        )
+        print(f"  找到 {len(articles)} 篇文章:")
+        for a in articles[:10]:
+            print(f"    - {a['title']} | {a['time']} | {a['status']}")
+
         await context.close()
 
-asyncio.run(main())
+
+if __name__ == "__main__":
+    asyncio.run(main())

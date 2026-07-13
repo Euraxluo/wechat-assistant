@@ -1,22 +1,40 @@
 # Agent 指引
 
-本仓库用于「金融研究 + 公众号文章生产与自动发布」。完整说明见 [README.md](README.md)。
+本仓库是**微信公众号内容生产与自动发布 workspace**。完整架构见 [wechat-publish/docs/ARCHITECTURE.md](wechat-publish/docs/ARCHITECTURE.md)。
+
+## 核心原则
+
+- **一个发布引擎**：`wechat-publish/publish.py`（禁止新建 `publish_*.py`）
+- **题材差异**：读 `wechat-publish/config/topics/<type>.md`
+- **单次参数**：写 `wechat-publish/runs/<slug>.json`（不改编译器）
+- **长期记忆**：读/写 `wechat-publish/memory/lessons/` 与 `journal/`
 
 ## 项目级 Skill
 
-Skill 存放在 `.agents/skills/`（Cursor 通过 `.cursor/skills` 软链读取同一目录）。
-
 | 类别 | Skill |
 |------|-------|
-| 金融分析 | `xiaodi-financial-analysis-team`, `akshare-stock`, `claw-stock`, `china-stock-analysis`, `claw-stock-watcher-pro`, `stock-monitor-skill`, `astock-report` |
-| 辅助 | `data-analysis-skill`, `web_search`, `content-creator-cn`, `content-strategy` |
 | 发布 | `wechat-auto-publish` |
+| 辅助 | `content-creator-cn`, `web_search`, `content-strategy` |
+| 金融（财经题材用） | `akshare-stock`, `xiaodi-financial-analysis-team`, … |
 
-## 快速入口
+## 标准发布闭环
 
-- 发布脚本：`wechat-publish/auto_publish.py`
-- 发布 Skill：`.agents/skills/wechat-auto-publish/`
+```text
+1. 读 config/topics/<topic>.md + memory/lessons/<topic>.md
+2. 选题 → content/plans/（或过渡期 articles/topic-plan-*.md）
+3. 写文 + 配图 → content/drafts/ + content/assets/<slug>/
+4. 新建 runs/<slug>.json
+5. python wechat-publish/publish.py --run <slug>.json
+6. python wechat-publish/utils/verify_publish.py
+7. 写 memory/journal/<date>-<slug>.md
+```
 
-## 午盘/盘中研报提醒
+## 午盘/盘中研报
 
-用户要求“午盘研报 + 推文/公众号发送”时，必须按 `README.md` 的午盘/盘中研报自动发布 SOP 闭环执行：取数并落盘 → 生成 `wechat-publish/articles/*.html` → 更新 `auto_publish.py` 顶部发布参数 → 运行发布脚本 → `utils/verify_publish.py` 验证发表记录。不要只输出分析文本。
+财经题材用 `finance-news` profile，数据快照落 `data/` 或 `articles/*_data.json`，其余同上。
+
+## 反模式
+
+- ❌ 复制 `publish_*.py` 发新题材
+- ❌ 把踩坑写进脚本顶部注释
+- ❌ ImageGen 超时后复用其他题材旧图

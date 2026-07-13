@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>GPT-5.6：一小时证出50年数学猜想，却误删了用户的Mac文件</title>
+</head>
+<body>
+  <h1 style="font-size:26px;font-weight:800;line-height:1.4;color:#0b1f3a;margin:8px 0 6px;letter-spacing:-0.3px;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;">GPT-5.6：一小时证出 50 年数学猜想，却误删了用户的 Mac 文件</h1>
+  <p style="font-size:14px;color:#5b6b85;margin:0 0 24px;padding-bottom:16px;border-bottom:1px solid #e8edf5;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;">AI提效实验室 · 科技/AI 资讯 · 2026-07-13</p>
+
+  <div style="font-size:17px;color:#243049;background:#f3f7ff;border-radius:10px;padding:16px 18px;margin:18px 0 26px;line-height:1.8;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;">
+    同一周里，OpenAI 的最新模型一边用不到一小时写完了存在半世纪的图论猜想证明，一边被曝会随机删光用户电脑里的文件。最强模型的高光，和最尴尬的翻车，几乎同框。
+  </div>
+
+  <img src="Editorial_illustration__a_glow_2026-07-13T06-34-19.png" style="width:100%;border-radius:10px;margin:22px 0;display:block;" alt="神经网络协作证明数学猜想">
+  <p style="font-size:13px;color:#8a97ad;text-align:center;margin:-14px 0 22px;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;">AI 用 64 个「子代理」并行协作，像一支研究团队分工攻克难题（概念图，非真实界面）</p>
+
+  <h2 style="font-size:20px;font-weight:700;color:#0b3d91;margin:36px 0 12px;padding-left:12px;border-left:4px solid #2f7bff;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;">高光：不到一小时，证出一道 50 年猜想</h2>
+
+  <p style="margin:14px 0;font-size:16px;line-height:1.85;color:#1a2233;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;">7 月 11 日，OpenAI 研究员 Ethan Knight 宣布：刚发布的 <strong style="color:#0b3d91;">GPT-5.6 Sol Ultra</strong> 用不到一小时，完成了图论中著名的<strong style="color:#0b3d91;">「循环双覆盖猜想」（Cycle Double Cover Conjecture）</strong>的一份证明。</p>
+
+  <p style="margin:14px 0;font-size:16px;line-height:1.85;color:#1a2233;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;">这道题来头不小。它说的是：任何一个「没有断桥」的连通图（可以想象成一张任意两点都能到达的地图/路网），都存在一组闭合回路，能把每条边恰好覆盖两次。这个猜想自 1970 年代被提出，近半个世纪里卡住了无数数学家。GPT-5.6 这次给出的，是一份约三页的 PDF 证明。</p>
+
+  <p style="margin:14px 0;font-size:16px;line-height:1.85;color:#1a2233;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;">它怎么做到的？关键不在「模型更聪明」这一个词，而在<em style="color:#2f7bff;font-style:normal;font-weight:600;">编排方式</em>：研究者只写了一份约 700 词的 prompt，把一个总目标「钉死验收标准」，然后让模型自己派生出 <strong style="color:#0b3d91;">64 个子代理（sub-agent）</strong>并行工作——类似你组建了一支 64 人的研究小组，有人负责找反例、有人负责写引理、有人独立审查，最后汇成证明。原本可能磨一整天的活，被压进了一小时。</p>
+
+  <p style="margin:14px 0;font-size:16px;line-height:1.85;color:#1a2233;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;">o1 的核心贡献者、正在韩国开 ICML 的 Noam Brown 也隔空点赞：这次没有用任何「内部特供模型」，靠公开能用的 GPT-5.6 Sol Ultra 就完成了。OpenAI 还顺手放出了完整 prompt，里面有一条被反复强调的驾驭大模型技巧：<strong style="color:#0b3d91;">不要替模型规定解法，只把验收标准钉死</strong>——定义、边界、什么不算答案，一次说清。</p>
+
+  <img src="Editorial_illustration__a_spli_2026-07-13T06-34-18.png" style="width:100%;border-radius:10px;margin:22px 0;display:block;" alt="天才与翻车的双面体">
+  <p style="font-size:13px;color:#8a97ad;text-align:center;margin:-14px 0 22px;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;">同一款模型，一边是数学高光，一边是工程翻车（概念图）</p>
+
+  <h2 style="font-size:20px;font-weight:700;color:#0b3d91;margin:36px 0 12px;padding-left:12px;border-left:4px solid #2f7bff;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;">翻车：它把用户的文件删光了</h2>
+
+  <p style="margin:14px 0;font-size:16px;line-height:1.85;color:#1a2233;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;">光环还没散，另一头就出了事。多位开发者陆续爆料：<strong style="color:#0b3d91;">GPT-5.6 Sol 版本存在严重 bug，会在处理本地任务时随机删除用户文件</strong>，且一旦删除，大概率无法恢复。</p>
+
+  <p style="margin:14px 0;font-size:16px;line-height:1.85;color:#1a2233;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;">最引人注目的是前 HyperWrite CEO、AI 投资人 <strong style="color:#0b3d91;">Matt Shumer</strong> 的遭遇。7 月 10 日，他受 OpenAI 邀请测试 GPT-5.6-Sol 的 Ultra 模式，给本地智能体开了「Full Access（完全访问）」，让它去执行一个普通的文件清理子任务。运行了约 1 小时 21 分钟后，他才发现不对劲——疯狂 kill 进程时，Mac 上的文件已经被删光。</p>
+
+  <img src="Editorial_illustration__a_slee_2026-07-13T06-34-18.png" style="width:100%;border-radius:10px;margin:22px 0;display:block;" alt="屏幕故障文件丢失">
+  <p style="font-size:13px;color:#8a97ad;text-align:center;margin:-14px 0 22px;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;">文件被误删、数据丢失（概念图，非真实截图）</p>
+
+  <p style="margin:14px 0;font-size:16px;line-height:1.85;color:#1a2233;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;">事发后，OpenAI 紧急发布修复补丁并公开致歉，提醒用户升级到最新版本。有意思的是，有开发者翻出 GPT-5.6 的「系统卡（system card）」发现，这个风险其实在文档里<em style="color:#2f7bff;font-style:normal;font-weight:600;">早有标注</em>，只是没人重视——「不要在未受保护的驱动器上使用 raw 格式」的警告被忽略了。</p>
+
+  <div style="background:#fff6f3;border:1px solid #ffd9cc;border-radius:10px;padding:14px 18px;margin:22px 0;font-size:15px;color:#7a3b25;line-height:1.8;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;">
+    ⚠️ <b style="color:#7a3b25;">给普通用户的提醒</b>：这次事故集中在「本地智能体 + 完全文件访问 + 最高推理档（Ultra）」的组合。日常用网页/App 聊天、不让模型直接操作你电脑文件的场景，基本不受影响。但若你用 Agent 类产品给 AI 开过本地文件权限，务必先升级到已修复版本，并避免对重要目录授予「完全访问」。
+  </div>
+
+  <h2 style="font-size:20px;font-weight:700;color:#0b3d91;margin:36px 0 12px;padding-left:12px;border-left:4px solid #2f7bff;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;">怎么看：官方宣称 vs 实测</h2>
+
+  <p style="margin:14px 0;font-size:16px;line-height:1.85;color:#1a2233;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;">把两件事放在一起，能看清当下前沿模型的真实位置：</p>
+
+  <p style="margin:14px 0;font-size:16px;line-height:1.85;color:#1a2233;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;"><span style="display:inline-block;font-size:12px;color:#2f7bff;background:#eaf2ff;border-radius:4px;padding:2px 8px;margin-right:6px;">数学证明</span>属于<strong style="color:#0b3d91;">官方发布 + 同行认可</strong>。OpenAI 放出完整证明与 prompt，ICML 圈核心人物公开背书，可信度较高；但它解决的是「特定被精心设定验收标准」的难题，不等于模型能随便证任意数学题。</p>
+
+  <p style="margin:14px 0;font-size:16px;line-height:1.85;color:#1a2233;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;"><span style="display:inline-block;font-size:12px;color:#2f7bff;background:#eaf2ff;border-radius:4px;padding:2px 8px;margin-right:6px;">误删文件</span>属于<strong style="color:#0b3d91;">第三方实测暴露</strong>。多位独立开发者复现，OpenAI 已确认并修复。这提醒我们：当模型被赋予「直接操作真实环境」的权限时，它的可靠性边界，仍远不如它在基准测试里看起来那么稳。</p>
+
+  <p style="margin:14px 0;font-size:16px;line-height:1.85;color:#1a2233;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;">一句话总结：GPT-5.6 证明了「聪明的编排能让 AI 做到惊人的事」，也证明了「让 AI 直接碰你的文件系统，依然危险」。前者是方法论的胜利，后者是工程成熟的欠账——而后者，往往比前者更影响你我的日常。</p>
+
+  <div style="font-size:13px;color:#7d8aa0;background:#f6f8fc;border-radius:8px;padding:12px 16px;margin:26px 0;line-height:1.7;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;">
+    <b style="color:#44536e;">主要信源</b><br>
+    · 数学证明：量子位（QbitAI）报道 OpenAI 研究员 Ethan Knight 宣布、Noam Brown 点评；OpenAI 放出完整 prompt<br>
+    · 文件删除 bug：新智元、网易、腾讯网等报道 Matt Shumer 等受害者，OpenAI 修复并致歉<br>
+    · 时间线：证明宣布 7/11，删除 bug 集中曝光于 7/10–7/12，OpenAI 同期发布补丁
+  </div>
+</body>
+</html>

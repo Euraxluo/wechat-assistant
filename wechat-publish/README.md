@@ -1,43 +1,47 @@
-# WeChat Publish - 微信公众号自动发布
+# wechat-publish — 公众号 Workspace
 
-通过 Playwright 浏览器自动化，实现微信公众号文章的一键排版、封面上传、草稿保存和群发。
+> 架构说明：[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
-## 目录结构
-
-```
-wechat-publish/
-├── auto_publish.py          # 主发布脚本（v9）
-├── draft_url.json           # 草稿缓存（运行时自动生成/删除）
-├── README.md                # 本文件
-├── articles/                # 文章 HTML 文件
-│   ├── article_ai_invest_v3.html   # 最新版（研报风格）
-│   ├── article_ai_invest_v2.html   # 旧版
-│   └── article_ai_invest.html      # 初版
-├── covers/                  # 封面图片
-│   └── latest_cover_v3.png
-├── screenshots/             # 运行时截图
-├── diagnostics/             # 诊断/调试脚本（开发参考）
-│   ├── diag_cover_set.py
-│   ├── diag_cover_save.py
-│   ├── diag_cover_api2.py
-│   ├── diag_draftbox_v2.py
-│   ├── diag_editor_v2.py
-│   └── diag_editor_publish_final.py
-├── utils/                   # 辅助工具
-│   ├── republish.py         # 从草稿箱重新发表
-│   ├── verify_publish.py    # 验证文章是否已发表
-│   ├── publish_final.py     # 最终发布脚本
-│   └── check_draftbox.py    # 检查草稿箱状态
-└── .browser_profile/        # Playwright 持久化浏览器会话（运行后自动生成）
-```
-
-## 运行
+## 快速开始
 
 ```bash
-cd wechat-publish
-/Users/echo/.workbuddy/binaries/python/envs/default/bin/python auto_publish.py
+# 1. 读题材 profile
+cat config/topics/hot-social.md
+
+# 2. 复制运行配置
+cp runs/_example.json runs/my-article.json
+# 编辑 title / html / cover ...
+
+# 3. 发布
+python publish.py --run my-article.json
+
+# 4. 验证
+python utils/verify_publish.py
 ```
 
-## Skill
+## 目录一览
 
-配套 skill 位于 `.agents/skills/wechat-auto-publish/`（Cursor 通过 `.cursor/skills` 软链读取），可通过 Agent 对话直接调用。
+| 目录 | 职责 | Git |
+|------|------|-----|
+| `engine/` | Playwright 发布引擎（勿为单次选题修改） | ✅ |
+| `config/topics/` | 题材 profile（差异声明） | ✅ |
+| `runs/` | 单次运行 JSON（发一篇加一个文件） | 仅 `_example.json` ✅ |
+| `memory/lessons/` | 跨次踩坑沉淀 | ✅ |
+| `memory/journal/` | 单次复盘 | ❌ 本地 |
+| `content/` | 文章、配图、选题计划 | ⚖️ 见 [docs/GIT_POLICY.md](docs/GIT_POLICY.md) |
+| `data/` | 行情 JSON 快照 | ⚖️ |
+| `utils/` | verify / republish / check_draftbox | ✅ |
+| `_archive/` | 废弃脚本 | ✅ |
+
+**Git 策略全文**：[docs/GIT_POLICY.md](docs/GIT_POLICY.md)
+
+## Python 环境
+
+```bash
+/Users/echo/.workbuddy/binaries/python/envs/default/bin/python publish.py --run ...
+```
+
+## 工作流 SOP
+
+- 社会热点：[docs/workflows/hot-social-sop.md](docs/workflows/hot-social-sop.md)
+- **Git vs 本地**：[docs/GIT_POLICY.md](docs/GIT_POLICY.md) ← 什么该提交、什么留本机

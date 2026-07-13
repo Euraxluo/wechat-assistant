@@ -1,0 +1,165 @@
+<section style="font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Helvetica Neue',Arial,sans-serif; color:#1f2329; line-height:1.8; font-size:16px; padding:4px 2px;">
+
+<h1 style="font-size:23px; font-weight:800; color:#0f1b3d; line-height:1.4; margin:8px 0 14px; border-left:5px solid #4f6bff; padding-left:12px;">2026，KV 存储走到哪了？</h1>
+
+<p style="margin:6px 0 16px; color:#6b7280; font-size:14px;">基于 25 个来源、99 条可证伪 claim 与三方对抗验证的现代 KV 存储综述</p>
+
+<img src="images/Cover_image_for_a_technical_ar_2026-07-13T07-31-37.png" style="width:100%; border-radius:10px; margin:10px 0 18px; display:block;" />
+
+<section style="background:#f5f7ff; border-left:4px solid #4f6bff; padding:12px 16px; border-radius:0 6px 6px 0; color:#374151; font-size:14px; margin:0 0 20px;">
+我们派 107 个 AI Agent 做了一次深度调研：5 个搜索角度并行、抓取 25 个来源、提取 99 个可证伪 claim、用 3 票对抗验证筛出 25 个关键结论——最终 <strong style="color:#1d4ed8;">24 个通过验证、1 个被推翻</strong>。下面是基于验证结果的现代 KV 存储全景。
+</section>
+
+<p style="margin:18px 0;">KV 存储是整个数据库世界的心脏。你刷的每一条朋友圈、下的每一单、链的每一个区块，底层都坐着一个 KV 引擎。到了 2026 年，工业界的主线已经很清楚：以 LSM / 日志结构为核心，但工程的重心早就不只是“写得快”——而是 compaction/GC、读写资源竞争、KV 分离、缓存与索引，以及云原生与多副本事务的一体化优化。</p>
+
+<p style="margin:18px 0;">这篇不是某一个人的笔记，而是一次“群殴式”调研的产物。</p>
+
+<h2 style="font-size:18px; font-weight:700; color:#1a2b5e; margin:30px 0 12px; padding-bottom:6px; border-bottom:2px solid #eef1fb;">这次调研是怎么做的</h2>
+
+<p style="margin:14px 0;">我们用一个 deep-research 工作流跑了“现代 KV 存储 2026 全景”这个问题，机制分四步：</p>
+
+<section style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:6px 18px; margin:14px 0; font-size:14px; color:#374151;">
+<p style="margin:10px 0;">① <strong>拆题</strong>：把问题拆成 5 个互补的搜索角度（工业选型 / 学术前沿 / 源码设计 / 新硬件与云原生 / 设计演进）；</p>
+<p style="margin:10px 0;">② <strong>搜索</strong>：5 路 WebSearch agent 并行抓取，去重后精读 25 个来源、提取 99 个可证伪 claim；</p>
+<p style="margin:10px 0;">③ <strong>验证</strong>：每个 claim 交给 3 个 agent 独立“找茬”，2/3 反对才杀掉；</p>
+<p style="margin:10px 0;">④ <strong>综合</strong>：25 个 claim 进入验证——<strong style="color:#1d4ed8;">24 个 confirmed，1 个 refuted，0 个悬而未决</strong>。</p>
+</section>
+
+<p style="margin:14px 0;">这套对抗机制还识别出一条未能获得交叉证据一致支持的 DobLIX 性能 claim，因此最终综合只保留其设计方向，不采纳该性能数字。先记住这组统计：<strong style="color:#0f172a;">107 agents、99 claims、24/25 通过</strong>。</p>
+
+<h2 style="font-size:18px; font-weight:700; color:#1a2b5e; margin:30px 0 12px; padding-bottom:6px; border-bottom:2px solid #eef1fb;">一、工业实现：三块基石</h2>
+
+<h3 style="font-size:16px; font-weight:700; color:#243b6b; margin:22px 0 8px;">1）RocksDB —— 工业级 LSM KV 的“基准形态”<sup style="font-size:11px; color:#4f6bff;">[1][2]</sup></h3>
+
+<ul style="margin:10px 0; padding-left:20px; font-size:15px; color:#374151;">
+<li style="margin:6px 0;"><strong>出身</strong>：Facebook/Meta，从 LevelDB 1.5 fork 而来、复用大量 LevelDB 代码；C++；key/value 是任意字节流。</li>
+<li style="margin:6px 0;"><strong>能力</strong>：Get/Put/Delete 点查，外加<strong>有序范围扫描</strong>——这是它比纯 hash 引擎强的地方。</li>
+<li style="margin:6px 0;"><strong>写路径</strong>（学习 LSM 的标准工程模型）：</li>
+</ul>
+
+<section style="background:#0f172a; color:#e2e8f0; font-family:'SF Mono',Consolas,Menlo,monospace; padding:14px 16px; border-radius:8px; font-size:13px; margin:12px 0; line-height:1.6;">
+memtable（内存）<br/>&nbsp;&nbsp;↓ 顺序写 WAL（崩溃恢复）<br/>&nbsp;&nbsp;↓ memtable 写满 flush<br/>L0 SST 文件 → L1/L2… 层级合并
+</section>
+
+<ul style="margin:10px 0; padding-left:20px; font-size:15px; color:#374151;">
+<li style="margin:6px 0;"><strong>介质取向</strong>：起初面向 flash/SSD 的服务器负载，但也支持 HDD、ramfs、remote storage。结论很直白——2026 年做 KV 引擎，存储介质、I/O 延迟和资源调度必须进设计。</li>
+</ul>
+
+<img src="images/Editorial_illustration__a_mode_2026-07-13T07-30-59.png" style="width:100%; border-radius:8px; margin:14px 0; display:block;" />
+
+<h3 style="font-size:16px; font-weight:700; color:#243b6b; margin:22px 0 8px;">2）TiKV —— 把“本地引擎”抬升成“分布式事务 KV”<sup style="font-size:11px; color:#4f6bff;">[3][4]</sup></h3>
+
+<ul style="margin:10px 0; padding-left:20px; font-size:15px; color:#374151;">
+<li style="margin:6px 0;"><strong>定位</strong>：开源的分布式事务 KV，不只是嵌入式库，提供 Raw KV 和具 ACID 语义的 Transactional KV 两套 API。</li>
+<li style="margin:6px 0;"><strong>分层范式</strong>（云原生 KV 的标准答案）：
+  <ul style="margin:6px 0; padding-left:18px;">
+  <li style="margin:4px 0;">每个 Store 内部用 RocksDB 持久化本地数据；</li>
+  <li style="margin:4px 0;">KV 空间按 <strong>Region</strong> 切分、迁移（Region 是数据调度的基本单位）；</li>
+  <li style="margin:4px 0;"><strong>PD</strong> 组件做自动均衡与 placement；</li>
+  <li style="margin:4px 0;">一个 Region 的多个副本组成 <strong>Raft group</strong>，靠 Raft 保证一致与复制。</li>
+  </ul>
+</li>
+</ul>
+
+<section style="background:#fff7ed; border:1px solid #fdba74; border-radius:6px; padding:10px 14px; color:#9a3412; font-size:14px; margin:14px 0;">
+⚠️ 一句提醒：Raft 管的是“副本复制 + 一致性”，PD 管的是“调度 + 放置”——别把它们混为一谈。这条结论验证时 Raft 部分只拿到 2-1，置信度 medium，且新版本里 Raft log 存储还可能走 Raft Engine 之类变体。
+</section>
+
+<h3 style="font-size:16px; font-weight:700; color:#243b6b; margin:22px 0 8px;">3）Pebble —— Go 生态的生产化答案<sup style="font-size:11px; color:#4f6bff;">[5][6]</sup></h3>
+
+<ul style="margin:10px 0; padding-left:20px; font-size:15px; color:#374151;">
+<li style="margin:6px 0;"><strong>背景</strong>：CockroachDB 的存储引擎，v20.1 作为可选引入、v20.2 起成为默认；受 LevelDB/RocksDB 启发，但用 Go 重写。</li>
+<li style="margin:6px 0;"><strong>它保住了核心 LSM 能力</strong>：block-based table、compaction、SST ingestion、snapshots、range tombstones、Bloom filters。</li>
+<li style="margin:6px 0;"><strong>兼容性坑</strong>：v2+ 不能直接打开 RocksDB 生成的库，否则可能<strong>静默损坏</strong>数据。如果你的栈是 Go，Pebble 是绕不开的参照系。</li>
+</ul>
+
+<section style="background:#f0fdf4; border-left:4px solid #22c55e; padding:12px 16px; border-radius:0 6px 6px 0; color:#166534; font-size:14px; margin:16px 0;">
+<strong>小结</strong>：工业主线 = 本地 LSM 引擎 → 有序扫描 / SST / compaction → 分布式事务与 Raft 分层。RocksDB 是“事实标准”，TiKV 是“分布式化的样板”，Pebble 是“Go 世界的落地”。
+</section>
+
+<img src="images/Editorial_illustration__a_dist_2026-07-13T07-30-59.png" style="width:100%; border-radius:8px; margin:14px 0; display:block;" />
+
+<h2 style="font-size:18px; font-weight:700; color:#1a2b5e; margin:30px 0 12px; padding-bottom:6px; border-bottom:2px solid #eef1fb;">二、学术前沿：三把火</h2>
+
+<h3 style="font-size:16px; font-weight:700; color:#243b6b; margin:22px 0 8px;">1）EcoTune（SIGMOD 2025）—— 把 compaction 当“投资”<sup style="font-size:11px; color:#4f6bff;">[7]</sup></h3>
+
+<p style="margin:12px 0;">传统 compaction 研究围着写放大/读放大打转。EcoTune 换个角度：compaction 本质是往 CPU 和 I/O 带宽里“投钱”，目的是提升未来/平均查询吞吐。它用<strong>动态规划</strong>，根据 workload 特征选 compaction 策略；核心洞见是 compaction 和 query 共享 CPU 与 SSD I/O，必须显式建模资源竞争。论文在 RocksDB / Dostoevsky 系环境评估。</p>
+
+<p style="margin:12px 0; color:#6b7280; font-size:14px;">⚠️ 论文里的性能数字别脱离它的实验环境外推。</p>
+
+<h3 style="font-size:16px; font-weight:700; color:#243b6b; margin:22px 0 8px;">2）DumpKV（VLDB 2025）—— 用“学习型 GC”管 KV 分离<sup style="font-size:11px; color:#4f6bff;">[8]</sup></h3>
+
+<p style="margin:12px 0;">KV 分离里，GC 常用静态参数，很难同时压住写放大和空间浪费（因为 key 的寿命事先不知道）。DumpKV 用访问历史训练一个轻量模型，<strong>预测 key lifetime</strong> 来指导 GC。作者实验里 GC 写量在真实负载降 <strong>25.7%–53.3%</strong>、合成负载降 19%–65%，额外存储开销很小。</p>
+
+<p style="margin:12px 0; color:#6b7280; font-size:14px;">⚠️ 这是作者实验结果，不是你的生产保证。</p>
+
+<h3 style="font-size:16px; font-weight:700; color:#243b6b; margin:22px 0 8px;">3）DobLIX（VLDB 2025）—— learned index 的双目标，以及一个被推翻的 claim<sup style="font-size:11px; color:#4f6bff;">[9]</sup></h3>
+
+<p style="margin:12px 0;">传统 learned index 主要优化“索引查找”，却忽略了底层数据访问代价。DobLIX 提出 <strong>dual-objective</strong>：同时优化 lookup 与 storage data access，用 PLA/PRA 两类近似方法，再让一个 RL agent 在 workload 变化时挑近似方法、最大误差和 block size。</p>
+
+<section style="background:#fffbeb; border:1px solid #fcd34d; border-radius:6px; padding:10px 14px; color:#92400e; font-size:14px; margin:14px 0;">
+<strong>证据处理说明</strong>：关于“相比 SOTA learned-index 吞吐提升 1.19×–2.21×”的 claim，在本工作流的 3 票验证中得到 <strong>1-2</strong>（1 票支持、2 票反对）。由于交叉证据未形成一致支持，最终综合只保留 DobLIX 的设计方向，不采纳该性能数字。这里的“refuted”表示未通过本次自动化证据门槛，不等同于对论文结论作最终学术裁决。
+</section>
+
+<img src="images/Editorial_illustration__academ_2026-07-13T07-30-59.png" style="width:100%; border-radius:8px; margin:14px 0; display:block;" />
+
+<h2 style="font-size:18px; font-weight:700; color:#1a2b5e; margin:30px 0 12px; padding-bottom:6px; border-bottom:2px solid #eef1fb;">三、横向综合：2026 KV 存储的五个共同趋势</h2>
+
+<p style="margin:14px 0;">把工业实现与近年论文放在同一张图上，会看到几个反复出现的主题。它们不是某条产品路线，而是当前 KV 存储设计正在共同面对的问题。</p>
+
+<section style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 16px; margin:12px 0;">
+<strong style="font-size:15px; color:#0f1b3d;">① 优化目标从“写得快”转向全链路资源效率</strong>
+<p style="margin:8px 0 0; font-size:14px; color:#475569;">写放大、读放大、空间放大仍是核心指标，但 compaction 与前台查询对 CPU、SSD I/O 的竞争越来越重要。EcoTune 所代表的方向，是把后台维护成本和未来查询收益放进同一个决策模型。</p>
+</section>
+
+<section style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 16px; margin:12px 0;">
+<strong style="font-size:15px; color:#0f1b3d;">② KV separation 正从固定规则走向 workload-aware GC</strong>
+<p style="margin:8px 0 0; font-size:14px; color:#475569;">键值分离能降低大 value 重写成本，却把压力转移到 value log 的垃圾回收。DumpKV 说明一个明显趋势：系统开始利用访问历史与生命周期预测，动态平衡写放大和空间浪费。</p>
+</section>
+
+<section style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 16px; margin:12px 0;">
+<strong style="font-size:15px; color:#0f1b3d;">③ Learned index 的目标开始下沉到真实存储访问</strong>
+<p style="margin:8px 0 0; font-size:14px; color:#475569;">仅缩短模型查找时间并不等于端到端更快。DobLIX 的 dual-objective 设计反映出研究重点正从“索引模型有多准”转向“索引误差、block size 与实际 I/O 代价如何联动”。</p>
+</section>
+
+<section style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 16px; margin:12px 0;">
+<strong style="font-size:15px; color:#0f1b3d;">④ 本地引擎与分布式数据库的边界更加分层</strong>
+<p style="margin:8px 0 0; font-size:14px; color:#475569;">RocksDB/Pebble 负责节点内持久化，TiKV 在其上叠加 Region、Raft、调度与事务。现代分布式 KV 的竞争，不只是替换底层引擎，而是处理存储层、复制层、调度层和事务层之间的耦合。</p>
+</section>
+
+<section style="background:#eef2ff; border:1px solid #c7d2fe; border-radius:8px; padding:12px 16px; margin:12px 0;">
+<strong style="font-size:15px; color:#0f1b3d;">⑤ 存储介质正在反向塑造算法</strong>
+<p style="margin:8px 0 0; font-size:14px; color:#475569;">SSD、remote storage、存储解耦乃至 ZNS/PMem/NVMe-oF，让 WAL、compaction、cache 和调度不能再脱离硬件与部署形态讨论。遗憾的是，本次 surviving claims 对这些方向的覆盖不足，因此它们应被视为待继续验证的研究前沿，而非已经定型的结论。</p>
+</section>
+
+<h2 style="font-size:18px; font-weight:700; color:#1a2b5e; margin:30px 0 12px; padding-bottom:6px; border-bottom:2px solid #eef1fb;">四、研究的边界（诚实收尾）</h2>
+
+<p style="margin:14px 0;">任何调研都有盲区，这份也不例外：</p>
+
+<ul style="margin:10px 0; padding-left:20px; font-size:15px; color:#374151;">
+<li style="margin:8px 0;"><strong>覆盖不足</strong>：Badger、FASTER、WiredTiger、Speedb、LevelDB 细节，以及 ZNS SSD / PMem / NVMe-oF / 存储解耦等方向，没在幸存证据里得到同等覆盖，需要额外检索。</li>
+<li style="margin:8px 0;"><strong>区分两件事</strong>：“论文作者实验结果” vs “工业生产已验证”。EcoTune / DumpKV / DobLIX 的方向可信，性能收益不能直接外推到任意 workload。</li>
+<li style="margin:8px 0;"><strong>开放问题</strong>：这些研究方案是否提供可复现 artifact，能否在统一数据集、硬件与 workload 下进行公平对比？这是综述之后最值得继续验证的问题。</li>
+</ul>
+
+<h2 style="font-size:18px; font-weight:700; color:#1a2b5e; margin:30px 0 12px; padding-bottom:6px; border-bottom:2px solid #eef1fb;">参考来源</h2>
+
+<section style="background:#f8fafc; border-radius:8px; padding:14px 20px; font-size:13px; color:#64748b; line-height:1.9;">
+<ul style="margin:0; padding-left:18px;">
+<li style="margin:6px 0;"><strong>[1]</strong> RocksDB Overview, Meta RocksDB Wiki<br/><span style="word-break:break-all;">github.com/facebook/rocksdb/wiki/RocksDB-Overview</span></li>
+<li style="margin:6px 0;"><strong>[2]</strong> RocksDB Architecture Guide / Write-Ahead Log / MemTable, Meta RocksDB Wiki</li>
+<li style="margin:6px 0;"><strong>[3]</strong> TiKV Architecture, TiKV Documentation<br/><span style="word-break:break-all;">tikv.org/docs/3.0/concepts/architecture/</span></li>
+<li style="margin:6px 0;"><strong>[4]</strong> TiKV Overview / Storage / Scheduling, PingCAP Documentation</li>
+<li style="margin:6px 0;"><strong>[5]</strong> Pebble, CockroachDB GitHub<br/><span style="word-break:break-all;">github.com/cockroachdb/pebble</span></li>
+<li style="margin:6px 0;"><strong>[6]</strong> Introducing Pebble: A RocksDB-inspired key-value store in Go, Cockroach Labs</li>
+<li style="margin:6px 0;"><strong>[7]</strong> EcoTune: Resource-aware LSM Compaction Optimization, PACMMOD / SIGMOD 2025<br/><span style="word-break:break-all;">people.iiis.tsinghua.edu.cn/~huanchen/publications/ecotune-sigmod25.pdf</span></li>
+<li style="margin:6px 0;"><strong>[8]</strong> DumpKV: Learning-based Garbage Collection for KV Separation, PVLDB 18<br/><span style="word-break:break-all;">vldb.org/pvldb/vol18/p1223-zhuang.pdf</span></li>
+<li style="margin:6px 0;"><strong>[9]</strong> DobLIX: Dual-Objective Learned Index for LSM-tree KV Stores, PVLDB 18<br/><span style="word-break:break-all;">vldb.org/pvldb/vol18/p3965-heidari.pdf</span></li>
+<li style="margin:6px 0;"><strong>[10]</strong> Rethinking LSM-tree based Key-Value Stores: A Survey, arXiv:2507.09642（2025）</li>
+<li style="margin:6px 0;">其余入选来源详见原始研究汇总；未通过验证的来源与 claim 未作为正文结论使用。</li>
+</ul>
+</section>
+
+<p style="margin:24px 0 8px; text-align:center; color:#6b7280; font-size:14px;">KV 存储没有银弹，只有在工作负载、硬件介质与一致性目标之间不断重做权衡。</p>
+
+</section>

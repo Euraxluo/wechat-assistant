@@ -61,15 +61,16 @@ wechat-assistant/
 
 | 目录 | 类型 | 作用 | 说明 |
 |------|------|------|------|
-| `wechat-publish/` | 项目代码 | 存放实际脚本、文章、封面、截图 | 这是**工作目录**，直接运行 `auto_publish.py` 来发表文章 |
-| `.agents/skills/wechat-auto-publish/` | Skill | 把发布逻辑封装成可复用的 skill | 这是**复用层**，通过 Agent 对话调用，底层会调用 `wechat-publish/` 中的脚本 |
+| `wechat-publish/` | Workspace | 发布引擎、题材配置、运行配置、memory | 执行 `publish.py --run <slug>.json` |
+| `.agents/skills/wechat-auto-publish/` | Skill | Agent 操作手册（不复制代码） | 对话入口，指向 workspace |
 
-**关系**：`wechat-auto-publish` skill 是 `wechat-publish/` 项目的外壳。Skill 提供对话式入口，实际执行依赖项目里的 Python 脚本。
+**关系**：Skill 是手册，workspace 是代码与数据。详见 `wechat-publish/docs/ARCHITECTURE.md`。
 
 **Agent 注意事项**：
-- 如果要**直接运行发布脚本** → 进入 `wechat-publish/` 目录执行 `auto_publish.py`
-- 如果要在**对话中调用 skill** → 使用 `wechat-auto-publish`（它会自动定位到项目脚本）
-- 不要混淆这两个名字。
+- 发布文章 → `wechat-publish/publish.py --run runs/<slug>.json`
+- 读题材差异 → `wechat-publish/config/topics/<type>.md`
+- 读历史踩坑 → `wechat-publish/memory/lessons/<type>.md`
+- **禁止**新建 `publish_*.py`
 
 ---
 
@@ -100,8 +101,10 @@ wechat-assistant/
    └─ 使用 gzh-design（用户级）或 wechat-publisher（用户级）
 
 8. 发布到公众号
-   └─ 进入 wechat-publish/，运行 auto_publish.py
-      或调用 .agents/skills/wechat-auto-publish/
+   └─ 写 `wechat-publish/runs/<slug>.json`
+   └─ 运行 `wechat-publish/publish.py --run <slug>.json`
+   └─ 运行 `wechat-publish/utils/verify_publish.py`
+   └─ 写 `wechat-publish/memory/journal/`
 ```
 
 ---
@@ -114,10 +117,10 @@ wechat-assistant/
 1. 先读 README.md / AGENTS.md，确认当前仓库流程
 2. 读取项目级 skill 文档：akshare-stock / astock-report / xiaodi-financial-analysis-team / content-creator-cn / wechat-auto-publish
 3. 取数并落盘：行情、板块资金、龙头量价、涨停/炸板、港股/南向
-4. 生成公众号 HTML：写入 wechat-publish/articles/<name>.html
-5. 修改 wechat-publish/auto_publish.py 顶部 ARTICLE_HTML_PATH / TITLE / DIGEST
-6. 运行 wechat-publish/auto_publish.py
-7. 运行 utils/verify_publish.py 验证发表记录
+4. 生成公众号 HTML → `wechat-publish/content/drafts/`（或过渡期 `articles/`）
+5. 新建 `wechat-publish/runs/<slug>.json`
+6. 运行 `wechat-publish/publish.py --run <slug>.json`
+7. 运行 `utils/verify_publish.py` 验证发表记录
 ```
 
 ### 5.1 本次验证过的卡点与处理方式
@@ -130,6 +133,8 @@ wechat-assistant/
 - **发布脚本参数是硬编码入口**：发布前必须检查 `auto_publish.py` 顶部的文章路径、标题、作者、摘要和封面路径是否对应本次文章。
 - **发表时微信验证是正常卡点**：脚本会等待“微信验证”弹窗，管理员/运营者扫码后继续；不要误判为失败。
 - **成功后必须验证**：`auto_publish.py` 显示成功后，继续运行 `python utils/verify_publish.py`，以发表记录包含目标文章作为最终确认。
+- **时点失效必须立刻废稿切题**：集合竞价稿只在竞价窗口有效；开盘稿只在开盘后短时间有效；午盘稿只在午盘窗口有效；收评稿只在收盘后有效。窗口一旦过去，不补发旧稿，直接改写当前时点内容。
+- **验证失败不等于未发表**：先用修正后的 `utils/verify_publish.py` 检查，再决定是否使用 `utils/republish.py` 从当前仓库草稿继续发表；不要依赖旧 workspace 的脚本或标题。
 
 ---
 
