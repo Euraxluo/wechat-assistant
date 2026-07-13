@@ -29,12 +29,14 @@
 7. 写 memory/journal/<date>-<slug>.md
 ```
 
-## 午盘/盘中研报
+## 题材示例（财经不是主线）
 
-财经题材用 `finance-news` profile，数据快照落 `data/` 或 `articles/*_data.json`，其余同上。
+写财经稿时：用 `finance-news` profile + 金融取数 skill；数据快照落 `data/snapshots/`。  
+写热点/科技/职场/影视时：用对应 profile + 搜索/写作 skill。发布步骤相同。
 
 ## 反模式
 
+- ❌ 把本仓库当成「金融分析产品」（金融 skill 只是财经题材的内容工具）
 - ❌ 复制 `publish_*.py` 发新题材
 - ❌ 把踩坑写进脚本顶部注释
 - ❌ ImageGen 超时后复用其他题材旧图

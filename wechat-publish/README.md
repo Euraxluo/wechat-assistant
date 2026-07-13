@@ -1,6 +1,7 @@
 # wechat-publish — 公众号 Workspace
 
-> 架构说明：[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+> 本目录是**微信公众号内容生产与自动发布**的工作区。金融相关 skill 只在财经题材写稿时使用，不是本目录的身份。  
+> 架构：[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · Git 策略：[docs/GIT_POLICY.md](docs/GIT_POLICY.md)
 
 ## 快速开始
 
