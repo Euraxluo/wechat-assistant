@@ -14,14 +14,14 @@
 | 类别 | Skill |
 |------|-------|
 | 发布 | `wechat-auto-publish` |
-| 辅助 | `content-creator-cn`, `web_search`, `content-strategy` |
-| 金融（财经题材用） | `akshare-stock`, `xiaodi-financial-analysis-team`, … |
+| 通用内容 | `content-creator-cn`, `web_search`, `content-strategy` |
+| 题材专属 | 见对应 `config/topics/<type>.md`（按需挂接） |
 
 ## 标准发布闭环
 
 ```text
 1. 读 config/topics/<topic>.md + memory/lessons/<topic>.md
-2. 选题 → content/plans/（或过渡期 articles/topic-plan-*.md）
+2. 选题 → content/plans/
 3. 写文 + 配图 → content/drafts/ + content/assets/<slug>/
 4. 新建 runs/<slug>.json
 5. python wechat-publish/publish.py --run <slug>.json
@@ -29,14 +29,8 @@
 7. 写 memory/journal/<date>-<slug>.md
 ```
 
-## 题材示例（财经不是主线）
-
-写财经稿时：用 `finance-news` profile + 金融取数 skill；数据快照落 `data/snapshots/`。  
-写热点/科技/职场/影视时：用对应 profile + 搜索/写作 skill。发布步骤相同。
-
 ## 反模式
 
-- ❌ 把本仓库当成「金融分析产品」（金融 skill 只是财经题材的内容工具）
 - ❌ 复制 `publish_*.py` 发新题材
 - ❌ 把踩坑写进脚本顶部注释
 - ❌ ImageGen 超时后复用其他题材旧图

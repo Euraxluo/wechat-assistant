@@ -1,6 +1,6 @@
 # wechat-publish — 公众号 Workspace
 
-> 本目录是**微信公众号内容生产与自动发布**的工作区。金融相关 skill 只在财经题材写稿时使用，不是本目录的身份。  
+> 微信公众号内容生产与自动发布工作区。  
 > 架构：[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · Git 策略：[docs/GIT_POLICY.md](docs/GIT_POLICY.md)
 
 ## 快速开始
@@ -30,7 +30,7 @@ python utils/verify_publish.py
 | `memory/lessons/` | 跨次踩坑沉淀 | ✅ |
 | `memory/journal/` | 单次复盘 | ❌ 本地 |
 | `content/` | 文章、配图、选题计划 | ⚖️ 见 [docs/GIT_POLICY.md](docs/GIT_POLICY.md) |
-| `data/` | 行情 JSON 快照 | ⚖️ |
+| `data/` | 写稿用数据快照（按题材可选） | ⚖️ |
 | `utils/` | verify / republish / check_draftbox | ✅ |
 | `_archive/` | 废弃脚本 | ✅ |
 

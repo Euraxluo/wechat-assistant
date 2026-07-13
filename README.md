@@ -6,15 +6,13 @@
 
 ## 1. 这个仓库是做什么的
 
-**核心是公众号发布工作台**，不是金融分析产品。
+多题材公众号内容生产与自动发布工作台。
 
 | 层 | 做什么 | 在哪 |
 |----|--------|------|
 | **发布能力** | Playwright 登录后台，一键发表图文 | `wechat-publish/` |
-| **题材扩展** | 社会热点 / 财经 / 科技 / 职场 / 影视等差异用 profile 声明 | `config/topics/` |
+| **题材扩展** | 各题材差异用 profile 声明 | `config/topics/` |
 | **内容生产 skill** | 按题材调用写作、搜索、取数等工具 | `.agents/skills/` |
-
-金融相关 skill（`akshare-stock`、`xiaodi-financial-analysis-team` 等）**只是财经题材写稿时用的取数/分析工具**，和热点题材用 `web_search`、职场题材用 `content-creator-cn` 一样——都是「为某条题材线服务的内容生产能力」，不是仓库身份。
 
 发布走 **单引擎 + 配置驱动**：换题材只改 profile / `runs/*.json`，禁止再复制 `publish_*.py`。
 
@@ -26,11 +24,11 @@
 wechat-assistant/
 ├── AGENTS.md                     # Agent 入口（精简）
 ├── README.md                     # 本文件
-├── .agents/skills/               # 项目级 Skill（发布 + 各题材内容工具）
+├── .agents/skills/               # 项目级 Skill（发布 + 内容工具）
 │   ├── wechat-auto-publish/      # 发布操作手册（不复制代码）
 │   ├── content-creator-cn/       # 中文写作
 │   ├── web_search/               # 搜索
-│   └── …（财经题材另有 akshare 等取数 skill）
+│   └── …（按题材按需挂接的其他 skill）
 └── wechat-publish/               # 公众号 Workspace
     ├── publish.py                # 🚪 唯一发布入口
     ├── engine/                   # Playwright 引擎（不变代码）
@@ -38,7 +36,7 @@ wechat-assistant/
     ├── runs/                     # 单次运行 JSON（本地，除 _example）
     ├── memory/                   # lessons(Git) + journal(本地)
     ├── content/                  # plans / drafts / published / assets(本地)
-    ├── data/snapshots/           # 数据快照（如财经行情 JSON）
+    ├── data/snapshots/           # 写稿用数据快照（按题材可选）
     ├── docs/                     # ARCHITECTURE / GIT_POLICY / workflows
     ├── utils/                    # verify / republish / check_draftbox
     └── _archive/                 # 废弃脚本（只读参考）
@@ -64,7 +62,7 @@ Git vs 本地：[wechat-publish/docs/GIT_POLICY.md](wechat-publish/docs/GIT_POLI
 
 ---
 
-## 4. 核心工作流（所有题材通用）
+## 4. 核心工作流
 
 ```text
 1. 读 config/topics/<topic>.md + memory/lessons/<topic>.md
@@ -79,46 +77,22 @@ Git vs 本地：[wechat-publish/docs/GIT_POLICY.md](wechat-publish/docs/GIT_POLI
 
 题材只决定「第 2–4 步用什么工具、什么文风」；第 5–7 步永远是同一套发布引擎。
 
-| 题材 `type` | 内容侧常用 skill / 工具 | profile |
-|-------------|-------------------------|---------|
-| `hot-social` | `web_search`、热搜 | [hot-social.md](wechat-publish/config/topics/hot-social.md) |
-| `finance-news` | `akshare-stock`、金融分析团队等 | [finance-news.md](wechat-publish/config/topics/finance-news.md) |
-| `tech-ai` | `web_search`、写作 skill | [tech-ai.md](wechat-publish/config/topics/tech-ai.md) |
-| `life-work` | 写作 / 选题 skill | [life-work.md](wechat-publish/config/topics/life-work.md) |
-| `ent-movie` | 影视资讯搜索 | [ent-movie.md](wechat-publish/config/topics/ent-movie.md) |
+| 题材 `type` | profile |
+|-------------|---------|
+| `hot-social` | [hot-social.md](wechat-publish/config/topics/hot-social.md) |
+| `finance-news` | [finance-news.md](wechat-publish/config/topics/finance-news.md) |
+| `tech-ai` | [tech-ai.md](wechat-publish/config/topics/tech-ai.md) |
+| `life-work` | [life-work.md](wechat-publish/config/topics/life-work.md) |
+| `ent-movie` | [ent-movie.md](wechat-publish/config/topics/ent-movie.md) |
 
-新增题材：复制 `config/topics/_template.md`，按需挂接 skill，不要改 `engine/`。
-
----
-
-## 5. 题材示例：财经午盘（不是仓库主线）
-
-当用户要「午盘研报 + 公众号发送」时，走通用闭环，只是内容侧换成财经工具：
-
-```text
-1. 读 finance-news profile + memory/lessons/
-2. 取数落盘 → data/snapshots/midday_data_YYYYMMDD.json
-3. 生成 HTML → content/drafts/
-4. 新建 runs/<slug>.json
-5. python publish.py --run <slug>.json
-6. python utils/verify_publish.py
-```
-
-### 5.1 财经题材常见卡点
-
-- 数字必须可追溯，无法核验时写「暂无可验证数据」
-- 行情成功后立刻写入 `data/snapshots/`，避免重复请求丢数
-- 发表时微信扫码是正常卡点（约 6 分钟窗口）
-- 时点失效立刻废稿切题（竞价 / 午盘 / 收评各有窗口）
-- 验证失败可先 `utils/republish.py` 从草稿继续
-
-其他题材的卡点写在各自 `memory/lessons/<topic>.md`。
+新增题材：复制 `config/topics/_template.md`，按需挂接 skill，不要改 `engine/`。  
+题材专属 SOP / 卡点写在对应 profile 与 `memory/lessons/<topic>.md`，不堆在本 README。
 
 ---
 
-## 6. 发布脚本使用说明
+## 5. 发布脚本使用说明
 
-### 6.1 前置条件
+### 5.1 前置条件
 
 ```bash
 /Users/echo/.workbuddy/binaries/python/envs/default/bin/python -m playwright install chromium
@@ -126,7 +100,7 @@ Git vs 本地：[wechat-publish/docs/GIT_POLICY.md](wechat-publish/docs/GIT_POLI
 
 首次运行需扫码登录，session 在 `.browser_profile/`（本地，不进 Git）。
 
-### 6.2 运行方式
+### 5.2 运行方式
 
 ```bash
 cd wechat-publish
@@ -137,14 +111,14 @@ cp runs/_example.json runs/my-article.json   # 编辑 title / html / cover / ima
 
 > `auto_publish.py` 已废弃，请勿再改其逻辑。
 
-### 6.3 引擎流程（engine/publish_core.py）
+### 5.3 引擎流程（engine/publish_core.py）
 
 1. 正文本地图 → 微信 CDN  
 2. 填标题 / 作者 / 摘要 / 正文  
 3. 上传封面 → 保存草稿 → 恢复封面预览  
 4. 发表 → 弹窗链 → 等待微信扫码（~6min）
 
-### 6.4 辅助脚本
+### 5.4 辅助脚本
 
 | 脚本 | 作用 |
 |------|------|
@@ -153,24 +127,29 @@ cp runs/_example.json runs/my-article.json   # 编辑 title / html / cover / ima
 | `utils/check_draftbox.py` | 检查草稿箱 |
 | `diagnostics/*.py` | 开发调试，生产勿用 |
 
+### 5.5 发布常见卡点
+
+- 发表时微信扫码验证是正常卡点，脚本等待约 6 分钟
+- 成功后必须跑 `verify_publish.py` 确认发表记录
+- 验证失败可先 `utils/republish.py` 从草稿继续
+- 封面/正文图须先上传微信 CDN（引擎会处理）
+
 ---
 
-## 7. Skill 怎么用
-
-**按题材选工具，不是按「本仓库只做金融」选。**
+## 6. Skill 怎么用
 
 | 场景 | 优先 Skill |
 |------|------------|
 | 发布到公众号 | `wechat-auto-publish` |
-| 任意题材写作 / 选题 | `content-creator-cn`、`content-strategy` |
+| 写作 / 选题 | `content-creator-cn`、`content-strategy` |
 | 搜热搜 / 资讯 | `web_search` |
-| **仅当**写财经稿需要行情/研报 | `akshare-stock`、`xiaodi-financial-analysis-team`、`claw-stock` 等 |
+| 某题材专属取数 / 分析 | 见该题材 `config/topics/<type>.md` |
 
 用户级 skill（gzh-design、wechat-viral-topic 等）见各工具全局目录。
 
 ---
 
-## 8. FAQ
+## 7. FAQ
 
 **Q：没有 WECHAT_APP_ID 怎么发？**  
 A：用 `publish.py` 浏览器自动化，不需要 API 白名单。
@@ -184,12 +163,12 @@ A：不要。`content/assets/` 仅本地，见 GIT_POLICY.md。
 **Q：新增题材？**  
 A：加 `config/topics/<type>.md`，按需挂 skill；不要新建 publish 脚本。
 
-**Q：本仓库是不是金融分析仓库？**  
-A：不是。本仓库是公众号工作台；金融 skill 只服务 `finance-news` 等题材的内容生产。
+**Q：发表后 320003 会话过期？**  
+A：正常现象，用 `verify_publish.py` 确认即可。
 
 ---
 
-## 9. Git 提交边界
+## 8. Git 提交边界
 
 | 提交 Git ✅ | 仅本地 ❌ |
 |------------|----------|
@@ -203,7 +182,7 @@ A：不是。本仓库是公众号工作台；金融 skill 只服务 `finance-ne
 
 ---
 
-## 10. 快速开始
+## 9. 快速开始
 
 ```bash
 ls .agents/skills/
@@ -215,4 +194,4 @@ python utils/verify_publish.py
 
 ---
 
-*最后更新：2026-07-13 · workspace v2*
+*最后更新：2026-07-14 · workspace v2*
