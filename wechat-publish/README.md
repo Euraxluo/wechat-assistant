@@ -32,7 +32,6 @@ python utils/verify_publish.py
 | `content/` | 文章、配图、选题计划 | ⚖️ 见 [docs/GIT_POLICY.md](docs/GIT_POLICY.md) |
 | `data/` | 写稿用数据快照（按题材可选） | ⚖️ |
 | `utils/` | verify / republish / check_draftbox | ✅ |
-| `_archive/` | 废弃脚本 | ✅ |
 
 **Git 策略全文**：[docs/GIT_POLICY.md](docs/GIT_POLICY.md)
 

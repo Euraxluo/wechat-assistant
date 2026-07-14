@@ -1,0 +1,109 @@
+{
+  "fetched_at": "2026-07-14T08:00:35+08:00",
+  "session": "premarket_morning_outlook",
+  "trade_date": "2026-07-14",
+  "sources": [
+    "tencent_qt_gtimg_a_indices",
+    "tencent_qt_gtimg_us",
+    "tencent_qt_gtimg_hk",
+    "tencent_qt_gtimg_futures"
+  ],
+  "indices_prev": {
+    "sh000001": {
+      "name": "上证指数",
+      "code": "000001",
+      "price": 3913.79,
+      "prev_close": 3996.16,
+      "open": 3966.02,
+      "change": -82.37,
+      "pct": -2.06
+    },
+    "sz399001": {
+      "name": "深证成指",
+      "code": "399001",
+      "price": 14522.85,
+      "prev_close": 15046.67,
+      "open": 14908.98,
+      "change": -523.82,
+      "pct": -3.48
+    },
+    "sz399006": {
+      "name": "创业板指",
+      "code": "399006",
+      "price": 3723.52,
+      "prev_close": 3842.73,
+      "open": 3809.86,
+      "change": -119.21,
+      "pct": -3.1
+    },
+    "sh000688": {
+      "name": "科创50",
+      "code": "000688",
+      "price": 1994.32,
+      "prev_close": 2064.98,
+      "open": 2038.36,
+      "change": -70.66,
+      "pct": -3.42
+    }
+  },
+  "us_close": {
+    "usDJI": {
+      "name": "道琼斯",
+      "code": ".DJI",
+      "price": 52498.64,
+      "prev_close": 52637.01,
+      "open": 52676.53,
+      "change": -138.37,
+      "pct": -0.26
+    },
+    "usIXIC": {
+      "name": "纳斯达克",
+      "code": ".IXIC",
+      "price": 25873.18,
+      "prev_close": 26281.61,
+      "open": 26088.31,
+      "change": -408.43,
+      "pct": -1.55
+    },
+    "usNDX": {
+      "name": "纳斯达克100",
+      "code": ".NDX",
+      "price": 29264.1,
+      "prev_close": 29825.11,
+      "pct": -1.88
+    },
+    "SPX_sina": {
+      "name": "标普500",
+      "price": 7515.34,
+      "pct": -0.79,
+      "source": "sina_finance_cailianshe_2026-07-14"
+    }
+  },
+  "asia": {
+    "hkHSI": {
+      "name": "恒生指数",
+      "code": "HSI",
+      "price": 24213.72,
+      "prev_close": 24175.12,
+      "open": 24157.65,
+      "change": 38.6,
+      "pct": 0.16
+    },
+    "hkHSTECH": {
+      "name": "恒生科技指数",
+      "code": "HSTECH",
+      "price": 4676.43,
+      "prev_close": 4721.66,
+      "open": 4719.68,
+      "change": -45.23,
+      "pct": -0.96
+    }
+  },
+  "futures": {},
+  "notes": [],
+  "themes": {
+    "geopolitics": "特朗普宣布恢复对伊朗港口封锁，霍尔木兹航运扰动，油价跳涨",
+    "us_semis": "费城半导体指数跌约4.78%，闪迪跌超12%，SK海力士ADR跌约9%",
+    "a_prev": "7月13日A股普跌：沪指收跌2.06%，深成指跌3.48%，创业板跌3.10%"
+  }
+}

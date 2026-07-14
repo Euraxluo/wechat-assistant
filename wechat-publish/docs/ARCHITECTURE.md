@@ -42,7 +42,6 @@ wechat-publish/                    # 公众号专用 workspace
 │   └── (当前仍为 utils/，兼容旧路径)
 │
 ├── diagnostics/                   # 🧪 开发调试（不用于生产）
-└── _archive/                      # 📦 废弃脚本（只读参考）
 ```
 
 ## 扩展点（膨胀控制）

@@ -15,23 +15,34 @@ from playwright.async_api import async_playwright
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 SCREENSHOT_DIR = PROJECT_DIR / "screenshots"
 USER_DATA_DIR = PROJECT_DIR / ".browser_profile"
-AUTO_PUBLISH_FILE = PROJECT_DIR / "auto_publish.py"
 DRAFT_URL_FILE = PROJECT_DIR / "draft_url.json"
+RUNS_DIR = PROJECT_DIR / "runs"
 MP_URL = "https://mp.weixin.qq.com/"
 SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def load_expected_title():
+def load_expected_title(cli_title: str | None = None):
+    if cli_title:
+        return cli_title
     if DRAFT_URL_FILE.exists():
         text = DRAFT_URL_FILE.read_text(encoding="utf-8")
         m = re.search(r'"title"\s*:\s*"([^"]+)"', text)
         if m:
             return m.group(1)
-    if AUTO_PUBLISH_FILE.exists():
-        text = AUTO_PUBLISH_FILE.read_text(encoding="utf-8")
-        m = re.search(r'^TITLE\s*=\s*["\'](.+?)["\']\s*$', text, re.M)
-        if m:
-            return m.group(1)
+    # 回退：最近修改的 runs/*.json（排除 _example）
+    runs = sorted(
+        [p for p in RUNS_DIR.glob("*.json") if p.name != "_example.json"],
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    for path in runs:
+        try:
+            import json
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if data.get("title"):
+                return data["title"]
+        except Exception:
+            continue
     return ""
 
 

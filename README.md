@@ -37,9 +37,8 @@ wechat-assistant/
     ├── memory/                   # lessons(Git) + journal(本地)
     ├── content/                  # plans / drafts / published / assets(本地)
     ├── data/snapshots/           # 写稿用数据快照（按题材可选）
-    ├── docs/                     # ARCHITECTURE / GIT_POLICY / workflows
+    └── docs/                     # ARCHITECTURE / GIT_POLICY / workflows
     ├── utils/                    # verify / republish / check_draftbox
-    └── _archive/                 # 废弃脚本（只读参考）
 ```
 
 详细架构：[wechat-publish/docs/ARCHITECTURE.md](wechat-publish/docs/ARCHITECTURE.md)  
@@ -109,7 +108,7 @@ cp runs/_example.json runs/my-article.json   # 编辑 title / html / cover / ima
 /Users/echo/.workbuddy/binaries/python/envs/default/bin/python utils/verify_publish.py
 ```
 
-> `auto_publish.py` 已废弃，请勿再改其逻辑。
+> `auto_publish.py` 已移除，统一使用 `publish.py --run <slug>.json`。
 
 ### 5.3 引擎流程（engine/publish_core.py）
 

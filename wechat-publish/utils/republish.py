@@ -11,7 +11,6 @@ PROJECT_DIR = Path(__file__).resolve().parents[1]
 DRAFT_URL_FILE = PROJECT_DIR / "draft_url.json"
 SCREENSHOT_DIR = PROJECT_DIR / "screenshots"
 USER_DATA_DIR = PROJECT_DIR / ".browser_profile"
-AUTO_PUBLISH_FILE = PROJECT_DIR / "auto_publish.py"
 MP_URL = "https://mp.weixin.qq.com/"
 SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -26,11 +25,16 @@ def load_expected_title():
     draft = load_draft()
     if draft and draft.get("title"):
         return draft["title"]
-    if AUTO_PUBLISH_FILE.exists():
-        text = AUTO_PUBLISH_FILE.read_text(encoding="utf-8")
-        m = re.search(r'^TITLE\s*=\s*["\'](.+?)["\']\s*$', text, re.M)
-        if m:
-            return m.group(1)
+    runs_dir = PROJECT_DIR / "runs"
+    for path in sorted(runs_dir.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True):
+        if path.name == "_example.json":
+            continue
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if data.get("title"):
+                return data["title"]
+        except Exception:
+            continue
     return ""
 
 
